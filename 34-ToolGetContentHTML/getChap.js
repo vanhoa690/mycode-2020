@@ -15,8 +15,8 @@ mongoose
     throw err;
   });
 module.exports.getChap = async function (story) {
-  console.log(story);
-  const chaps = [];
+  // console.log(story);
+  // const chaps = [];
   let { chapList } = story;
   let idStory = story._id;
   for (let i = 0; i < chapList.length; i++) {

@@ -69,84 +69,83 @@ app.get("/stories/:id", async function (req, res) {
     console.log(errors);
   }
 });
-// app.post("/", async function (req, res) {
-//   let { url, min, max, isDone } = req.body;
-//   // console.log(url, min, max);
-//   let story = await getStory(url);
-//   let chaps = await getLinks(url, min, max);
-//   let { name, content, author, genres, source } = story;
-//   let completed = isDone ? true : false;
-//   let data = {
-//     url,
-//     name,
-//     content,
-//     genres,
-//     source,
-//     completed,
-//     chaps,
-//   };
+app.post("/", async function (req, res) {
+  let { url, min, max, isDone } = req.body;
+  console.log(url, min, max);
+  let story = await getStory(url);
+  let chapList = await getLinks(url, min, max);
+  // let { name, content, author, genres, source } = story;
+  let { name, content, author, genres } = story;
+  let completed = isDone ? true : false;
+  let data = {
+    url,
+    name,
+    content,
+    genres,
+    completed,
+    chapList,
+  };
+  console.log(data);
+  let authorInfo = await saveAuthor(author);
+  let storyInfo = await saveStory(data, authorInfo);
+  // console.log(authorInfo);
+  console.log("Done");
+  // res.render("index", { authorInfo, storyInfo });
+});
+async function getStory(url) {
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+  // await page.setDefaultNavigationTimeout(0);
+  await page.goto(url, {
+    waitUntil: "load",
+  });
+  const name = await page.$eval("h3.title", (name) => name.innerText);
+  const content = await page.$eval(
+    ".desc-text",
+    (content) => content.innerText
+  );
+  const author = await page.$eval(
+    '.info a[itemprop="author"]',
+    (author) => author.innerText
+  );
+  const genres = await page.$$eval('.info a[itemprop="genre"]', (genre) =>
+    genre.map((g) => g.innerText)
+  );
+  // const source = await page.$eval(
+  //   ".info .source",
+  //   (source) => source.innerText
+  // );
+  let infoStory = {
+    name,
+    content,
+    author,
+    genres,
+  };
+  await browser.close();
+  return infoStory;
+}
 
-//   let authorInfo = await saveAuthor(author);
-//   let storyInfo = await saveStory(data, authorInfo);
-//   // console.log(authorInfo);
-//   console.log("Done");
-//   // res.render("index", { authorInfo, storyInfo });
-// });
-// async function getStory(url) {
-//   const browser = await puppeteer.launch({ headless: true });
-//   const page = await browser.newPage();
-//   // await page.setDefaultNavigationTimeout(0);
-//   await page.goto(url, {
-//     waitUntil: "load",
-//   });
-//   const name = await page.$eval("h3.title", (name) => name.innerText);
-//   const content = await page.$eval(
-//     ".desc-text",
-//     (content) => content.innerText
-//   );
-//   const author = await page.$eval(
-//     '.info a[itemprop="author"]',
-//     (author) => author.innerText
-//   );
-//   const genres = await page.$$eval('.info a[itemprop="genre"]', (genre) =>
-//     genre.map((g) => g.innerText)
-//   );
-//   const source = await page.$eval(
-//     ".info .source",
-//     (source) => source.innerText
-//   );
-//   let infoStory = {
-//     name,
-//     content,
-//     author,
-//     genres,
-//     source,
-//   };
-//   await browser.close();
-//   return infoStory;
-// }
+async function getLinks(url, min, max) {
+  let linksChap = [];
+  for (let i = min; i <= max; i++) {
+    const URL = url.concat("trang-", i, "/#list-chapter");
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+    // await page.goto(URL);
+    // await page.setDefaultNavigationTimeout(0);
+    await page.goto(URL, {
+      waitUntil: "load",
+    });
+    const links = await page.$$eval(".row ul.list-chapter li a", (link) =>
+      link.map((a) => a.href)
+    );
+    await browser.close();
+    linksChap = [...linksChap, ...links];
+  }
 
-// async function getLinks(url, min, max) {
-//   let linksChap = [];
-//   for (let i = min; i <= max; i++) {
-//     const URL = url.concat("trang-", i, "/#list-chapter");
-//     const browser = await puppeteer.launch({ headless: true });
-//     const page = await browser.newPage();
-//     // await page.goto(URL);
-//     // await page.setDefaultNavigationTimeout(0);
-//     await page.goto(URL, {
-//       waitUntil: "load",
-//     });
-//     const links = await page.$$eval(".row ul.list-chapter li a", (link) =>
-//       link.map((a) => a.href)
-//     );
-//     await browser.close();
-//     linksChap = [...linksChap, ...links];
-//   }
-
-//   return linksChap;
-// }
-// // getLinks();
+  return linksChap;
+}
+// getLinks();
 
 // async function getPageData(link, page) {
 //   // try {
@@ -188,91 +187,91 @@ app.get("/stories/:id", async function (req, res) {
 //   // throw err;
 //   // }
 // }
-// saveAuthor = async function (name) {
-//   let slug = name
-//     .trim()
-//     .toLowerCase()
-//     .normalize("NFD")
-//     .replace(/[\u0300-\u036f]/g, "")
-//     .replace(/đ/g, "d")
-//     .replace(/Đ/g, "D")
-//     .replace(/[^a-z0-9]+/g, "-");
-//   let authorFind = await Author.findOne({ slug });
-//   if (authorFind) return authorFind;
-//   try {
-//     let titleSEO = "Tác giả ".concat(name);
-//     let about = titleSEO;
-//     let descSEO = titleSEO;
-//     const author = new Author({
-//       name,
-//       slug,
-//       titleSEO,
-//       about,
-//       descSEO,
-//     });
-//     const saveAuthor = await author.save();
-//     return saveAuthor;
-//   } catch (errors) {
-//     console.log(errors);
-//     // res.render("chaps/chap", { errors });
-//   }
-//   // res.redirect("/chaps");
-// };
-// saveStory = async function (story, authorInfo) {
-//   let name = story.name;
-//   let slug = name
-//     .trim()
-//     .toLowerCase()
-//     .normalize("NFD")
-//     .replace(/[\u0300-\u036f]/g, "")
-//     .replace(/đ/g, "d")
-//     .replace(/Đ/g, "D")
-//     .replace(/[^a-z0-9]+/g, "-");
-//   let storyFind = await Story.findOne({ slug });
-//   if (storyFind) return storyFind;
-//   try {
-//     let urlGet = story.url;
-//     let titleSEO = "Đọc truyện ".concat(story.name, " Online");
-//     let content = story.content;
-//     let descSEO = titleSEO.concat(" : ", content.slice(0, 100), "...");
-//     let genres = story.genres;
-//     let author = authorInfo._id;
-//     let stories = authorInfo.stories;
-//     let source = story.source;
-//     let chaps = story.chaps;
-//     let completed = story.completed;
-//     const newStory = new Story({
-//       urlGet,
-//       name,
-//       slug,
-//       author,
-//       content,
-//       source,
-//       chaps,
-//       titleSEO,
-//       descSEO,
-//       genres,
-//       completed,
-//     });
-//     const saveStory = await newStory.save();
-//     stories.push(saveStory._id);
-//     const updateAuthor = await Author.updateOne(
-//       { _id: author },
-//       // { new: true },
-//       {
-//         $set: {
-//           stories,
-//         },
-//       }
-//     );
+saveAuthor = async function (name) {
+  let slug = name
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .replace(/[^a-z0-9]+/g, "-");
+  let authorFind = await Author.findOne({ slug });
+  if (authorFind) return authorFind;
+  try {
+    let titleSEO = "Tác giả ".concat(name);
+    let about = titleSEO;
+    let descSEO = titleSEO;
+    const author = new Author({
+      name,
+      slug,
+      titleSEO,
+      about,
+      descSEO,
+    });
+    const saveAuthor = await author.save();
+    return saveAuthor;
+  } catch (errors) {
+    console.log(errors);
+    // res.render("chaps/chap", { errors });
+  }
+  // res.redirect("/chaps");
+};
+saveStory = async function (story, authorInfo) {
+  let name = story.name;
+  let slug = name
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .replace(/[!)?$]+/gi, "")
+    .replace(/[^a-z0-9]+/g, "-");
+  let storyFind = await Story.findOne({ slug });
+  if (storyFind) return storyFind;
+  try {
+    let urlGet = story.url;
+    let titleSEO = "Đọc truyện ".concat(story.name, " Online");
+    let content = story.content;
+    let descSEO = titleSEO.concat(" : ", content.slice(0, 100), "...");
+    let genres = story.genres;
+    let author = authorInfo._id;
+    let stories = authorInfo.stories;
+    // let source = story.source;
+    let chapList = story.chapList;
+    let completed = story.completed;
+    const newStory = new Story({
+      urlGet,
+      name,
+      slug,
+      author,
+      content,
+      chapList,
+      titleSEO,
+      descSEO,
+      genres,
+      completed,
+    });
+    const saveStory = await newStory.save();
+    stories.push(saveStory._id);
+    const updateAuthor = await Author.updateOne(
+      { _id: author },
+      // { new: true },
+      {
+        $set: {
+          stories,
+        },
+      }
+    );
 
-//     return saveStory;
-//   } catch (errors) {
-//     console.log(errors);
-//     // res.render("chaps/chap", { errors });
-//   }
-//   // res.redirect("/chaps");
-// };
+    return saveStory;
+  } catch (errors) {
+    console.log(errors);
+    // res.render("chaps/chap", { errors });
+  }
+  // res.redirect("/chaps");
+};
 // saveData = async function (data) {
 //   createSlug
 //     .createSlug(data.name, Chap)
