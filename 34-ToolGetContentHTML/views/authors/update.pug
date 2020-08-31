@@ -1,0 +1,20 @@
+extends ../layouts/common
+block content
+  h1 Update Author
+  if author
+    form(action=`/truyenchus/edit/${author._id}`, method="POST")
+      .form-group
+        label(for="name") Author Name
+        input#name.form-control(name="name", type="text", value= author.name ? author.name : "")
+      .form-group
+        label(for="content") About Author
+        textarea#content(name="content", value= author.content ? author.content : "")
+      button.btn.btn-primary Update Author
+      .form-group
+        label(for="titleSEO") Title SEO
+        input#titleSEO.form-control(name="titleSEO", type="text" value= author.titleSEO ? author.titleSEO : "")
+      .form-group
+        label(for="descSEO") Desc SEO
+        textarea#descSEO(name="descSEO" value= author.descSEO ? author.descSEO : "")
+  else
+    h2 No author find

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	 <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <title>Document</title>
+  </head>
+  <body>
+  <a href='https://handlebarsjs.com/'>handlebars.js</a>
+<hr/>
+<div class='counter'></div>
+<hr/> 
+<div class='result'>
+  <div class='loading'>loading..<div> 
+</div>
+
+<script id="person-template" type="text/x-handlebars-template">
+  <div class="entry">
+    <div class='person'>
+      <div class='pic'>
+        <img src='{{img}}' />
+      </div>
+      <div class='info'>
+        <p>{{name}} [{{gender}}]</p>
+        <p>{{age}} years [{{dob}}]</p>
+        <p>{{phone}}</p>
+      </div>
+    </div>
+  </div>
+</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	  <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.12/handlebars.min.js"></script>
+
+    <script src="script.js"></script>
+  </body>
+</html>

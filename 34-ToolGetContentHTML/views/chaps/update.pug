@@ -1,0 +1,23 @@
+extends ../layouts/common
+block content
+  h1 Update Chap
+  if chap
+    form(action=`/chaps/edit/${chap._id}?_method=PATCH`, method="POST")
+      .form-group
+        select.form-control(name="story")
+          option(value=chap.story)=chap.story
+      .form-group
+        label(for="name") Chap Name
+        input#name.form-control(name="name", type="text", value=chap.name)
+      .form-group
+        label(for="content") Content Chap
+        textarea#content(name="content")=chap.content
+      button.btn.btn-primary Update Chap
+      .form-group
+        label(for="titleSEO") Title SEO
+        input#titleSEO.form-control(name="titleSEO", type="text" value=chap.titleSEO)
+      .form-group
+        label(for="descSEO") Desc SEO
+        textarea#descSEO(name="descSEO")=chap.descSEO
+  else
+    p No chap find dfgdfgdfg

@@ -1,0 +1,28 @@
+extends ../layouts/common
+block content
+  section.breadcrumb
+    a(href='#')
+      i.fas.fa-home
+      |  Home
+    i.fas.fa-angle-right
+    a(href='#') Author
+    i.fas.fa-angle-right
+    a(href='#') Nhi Can
+  section.authors
+    h3 List Authors
+    .authors-inner
+      if authors
+        ul
+          each author in authors
+            li.authors-item
+              a(href='/authors/' + author.slug)=author.name
+              span
+                | 05/06/202
+              a(href='/authors/edit/' + author.id) Edit Author
+              form
+                a(href='/authors/' + author.id) Delete Author
+      else
+        h1 Chua co tác giả
+        a(href='/authors/create') Add Author
+
+

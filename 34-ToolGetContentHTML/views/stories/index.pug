@@ -1,0 +1,28 @@
+extends ../layouts/common
+block content
+  section.breadcrumb
+    a(href='#')
+      i.fas.fa-home
+      | Home
+    i.fas.fa-angle-right
+    a(href='#') Stories
+    i.fas.fa-angle-right
+    a(href='#') Nhat niem vinh hang
+  section.storys
+    h3 List Stories
+    .storys-inner
+      if stories
+        ul
+          each story in stories
+            li.storys-item
+              a(href='/stories/' + story.slug)=story.name
+              span
+                | 05/06/202
+              a(href='/stories/edit/' + story.id) Edit Story
+              form
+                a(href='/stories/' + story.id) Delete Story
+      else
+        h1 No story find
+        a(href='/stories/create') Add Story
+
+

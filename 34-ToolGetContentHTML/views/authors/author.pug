@@ -1,0 +1,7 @@
+extends ../layouts/common
+block content
+  if author
+    h1=author.name
+    div!=author.about
+  else
+    div No Author Find

@@ -1,0 +1,8 @@
+extends ../layouts/common
+block content
+  if chap
+    h1=chap.name
+    p=chap.story.name
+    div!=chap.content
+  else
+    p No chap find
