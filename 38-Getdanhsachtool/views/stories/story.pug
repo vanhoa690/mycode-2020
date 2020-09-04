@@ -1,0 +1,38 @@
+extends ../layouts/common
+block content
+  if story
+    section.breadcrumb
+      a(href='#')
+        i.fas.fa-home
+        |  Trang chu
+      i.fas.fa-angle-right
+      a(href='#')= story.genres[0]
+      i.fas.fa-angle-right
+      a(href='#')=story.name
+    section.manga
+      .content
+        h2=story.name
+        p=story.slug
+        p='Thể loại: '
+          =story.genres[0]
+        p='Tác giả: '
+          =story.author.name
+        p='Ngày đăng: '
+          =story.created.toDateString()
+        p='Số lượt xem: '
+          =story.views
+        p=story.content
+      section.chaps
+        a(href='/chaps/create') Add Chap
+        h3 Danh sach chap truyen
+          if chaps.length > 0
+            ul
+              each chap in chaps
+                li.chaps-item
+                  a(href=`${story.slug}/${chap.slug}`)=chap.name
+          else
+            h1 Chua co chap nao
+            a(href='/chaps/create') Add Chap
+  else
+    p No story find
+    a(href='/soties/create') Add Story

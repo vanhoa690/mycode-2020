@@ -1,0 +1,23 @@
+extends ../layouts/common
+block content
+  h1 Update Story
+  if story
+    form(action="/stories/create", method="POST")
+      .form-group
+        select.form-control(name="author")
+            option(value=story.author)=story.author
+      .form-group
+        label(for="name") Story Name
+        input#name.form-control(name="name", type="text", value= story.name)
+      .form-group
+        label(for="content") Content Story
+        textarea#content(name="content")=story.content
+      button.btn.btn-primary Update Story
+      .form-group
+        label(for="titleSEO") Title SEO
+        input#titleSEO.form-control(name="titleSEO", type="text", value= story.titleSEO ? story.titleSEO : "")
+      .form-group
+        label(for="descSEO") Desc SEO
+        textarea#descSEO(name="descSEO")=story.descSEO
+  else
+    p No story find

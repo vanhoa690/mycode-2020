@@ -1,0 +1,27 @@
+extends ../layouts/common
+block content
+  h1 Create chap
+    if errors
+      each error in errors
+        .alert.alert-danger= error
+    form(action="/chaps/create", method="POST")
+      .form-group
+        select.form-control(name="story")
+          if stories
+            each story in stories
+              option(value=story.id)=story.name
+          else
+             option(value="") Chua co danh muc
+      .form-group
+        label(for="name") Chap Name
+        input#name.form-control(name="name", type="text")
+      .form-group
+        label(for="content") Content Chap
+        textarea#content.form-control(name="content")
+      button.btn.btn-primary Add Chap
+      .form-group
+        label(for="title") Title SEO
+        input#title.form-control(name="title", type="text")
+      .form-group
+        label(for="desc") Desc SEO
+        textarea#desc(name="desc")

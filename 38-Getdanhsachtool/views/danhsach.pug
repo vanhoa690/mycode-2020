@@ -1,0 +1,23 @@
+doctype html
+head
+  meta(charset='UTF-8')
+  meta(name='viewport' content='width=device-width, initial-scale=1.0')
+  link(rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css')
+  title Tool Get Content
+.container
+  h2 Tool Get Lisk link Danh sach
+  form(action="/danh-sach", method="POST")
+    .form-group
+      label(for='url') URL Danh sach Get:
+      input#url.form-control(name="url", type="text")
+    .form-group
+      label(for='max') Max Page
+      input#max.form-control(name="max", type="number")
+    button.btn.btn-primary Get Links Danh sach Story
+  h3 Danh sach chap truyen
+    if category
+      each ca in category
+        h4=ca.urlGet + " - " + ca._id
+        p=ca.storyList
+    else
+      h1 Chua co category

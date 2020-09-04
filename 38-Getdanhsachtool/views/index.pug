@@ -1,0 +1,35 @@
+doctype html
+head
+  meta(charset='UTF-8')
+  meta(name='viewport' content='width=device-width, initial-scale=1.0')
+  link(rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css')
+  title Tool Get Content
+.container
+  h2 Tool Get Content
+  form(action="/", method="POST")
+    .form-group
+      label(for='url') URL Story Get:
+      input#url.form-control(name="url", type="text")
+    .form-group
+      label(for='max') Max Page
+      input#max.form-control(name="max", type="number")
+    .form-group
+      select.form-control(name="isDone")
+        option(value=1 selected) Full Done
+        option(value=0) Dang ra
+    button.btn.btn-primary Get Links Chaps Story
+  .get-info
+    if data
+      h3 Story Info
+      p.author
+        | Author:
+        = authorInfo.name
+      p.story Story:
+      ul.chap__list
+        if storyInfo
+          each chap in storyInfo.chaps
+            li.chap__item
+              span.name
+                | Link Chap:
+                = chap
+

@@ -1,0 +1,39 @@
+extends ../layouts/common
+block content
+  section.breadcrumb
+    a(href='#')
+      i.fas.fa-home
+      |  Trang chu
+    i.fas.fa-angle-right
+    a(href='#') Tien Hiep
+    i.fas.fa-angle-right
+    a(href='#') Nhat niem vinh hang
+  section.manga
+  .content
+    h2 Nhat niem vinh hang
+    p
+      | Xbox Game Pass Ultimate Xbox Live Gold and over 100 high-quality
+      | console and PC games. Play together with friends and discover your
+      | next favorite game.
+    a.btn(href='#')
+      | Doc truyen
+      i.fas.fa-chevron-right
+  img(src='https://truyenonline.info/wp-content/uploads/2019/11/truyen-one-piece.jpg' alt='')
+  section.chaps
+    a(href='/chaps/create') Add Chap
+    h3 Danh sach chap truyen
+      if chaps.length > 0
+        ul
+          each chap in chaps
+            li.chaps-item
+              a(href='/chaps/' + chap.slug)=chap.name
+              span
+                | 05/06/202
+              a(href='/chaps/edit/' + chap._id) Edit Chap
+              form(action=`/chaps/${chap._id}?_method=DELETE`, method="POST")
+                button(type="submit") Delete Chap
+      else
+        h1 Chua co chap nao
+        a(href='/chaps/create') Add Chap
+
+

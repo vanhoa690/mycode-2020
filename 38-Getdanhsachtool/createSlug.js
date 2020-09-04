@@ -8,8 +8,10 @@ module.exports.createSlug = async function (name, model) {
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/đ/g, "d")
       .replace(/Đ/g, "D")
+      .replace(/[!)?$]+/gi, "")
       .replace(/[^a-z0-9]+/g, "-")
-	  .replace(/-+$/g, "");
+      .replace(/-+$/g, "");
+    // console.log(getSlug(slug, model));
     return getSlug(slug, model);
   }
   // res.redirect("/stories/create");
