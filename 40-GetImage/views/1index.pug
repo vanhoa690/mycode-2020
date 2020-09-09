@@ -1,0 +1,7 @@
+h3 Danh sach chap truyen
+  if stories
+    ul
+      each story in stories
+        li=story.name + " - " +story._id
+  else
+    h1 Chua co Story nao

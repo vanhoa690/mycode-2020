@@ -49,7 +49,9 @@ async function getPageData(link) {
     ".row h2 .chapter-title",
     (tit) => tit.innerText
   );
-
+  // h3.title
+  // 'h3[itemprop="name"]'
+  // .row h2 .chapter-title
   let content = await page.$eval("div#chapter-c", (cont) => cont.innerHTML);
   content = content
     .replace(/<div[\s\S]+?><\/div>/g, "")

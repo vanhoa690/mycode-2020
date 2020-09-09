@@ -1,0 +1,75 @@
+/* Header */
+#header {
+  display: -moz-flex;
+  display: -webkit-flex;
+  display: -ms-flex;
+  display: flex;
+  border-bottom: solid 5px #f56a6a;
+  padding: 6em 0 1em 0;
+  position: relative;
+}
+#header > * {
+  -moz-flex: 1;
+  -webkit-flex: 1;
+  -ms-flex: 1;
+  flex: 1;
+  margin-bottom: 0;
+}
+#header .logo {
+  border-bottom: 0;
+  color: inherit;
+  font-family: "Roboto Slab", serif;
+  font-size: 1.125em;
+}
+#header .icons {
+  text-align: right;
+}
+/* Icons */
+ul.icons {
+  cursor: default;
+  list-style: none;
+  padding-left: 0;
+}
+ul.icons li {
+  display: inline-block;
+  padding: 0 1em 0 0;
+}
+ul.icons li:last-child {
+  padding-right: 0;
+}
+ul.icons li .icon {
+  color: inherit;
+}
+ul.icons li .icon:before {
+  font-size: 1.25em;
+}
+/* Icon */
+.icon {
+  text-decoration: none;
+  border-bottom: none;
+  position: relative;
+}
+.icon:before {
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  line-height: 1;
+  text-transform: none !important;
+  font-family: "Font Awesome 5 Free";
+  font-weight: 400;
+}
+.icon > .label {
+  display: none;
+}
+.icon:before {
+  line-height: inherit;
+}
+.icon.solid:before {
+  font-weight: 900;
+}
+.icon.brands:before {
+  font-family: "Font Awesome 5 Brands";
+}
