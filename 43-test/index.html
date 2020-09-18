@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <script>
+      const src =
+        "https://nickdesaulniers.github.io/netfix/demo/frag_bunny.mp4";
+      fetch(src)
+        .then((response) => response.blob())
+        .then((blob) => {
+          const blobURL = URL.createObjectURL(blob);
+          const chunks = [];
+          const mimeCodec = "vdeo/webm; codecs=opus";
+          let duration;
+          let media = document.createElement("video");
+          media.onloadedmetadata = () => {
+            media.onloadedmetadata = null;
+            duration = Math.ceil(media.duration);
+            let arr = Array.from(
+              {
+                length: duration,
+              },
+              (_, index) => index
+            );
+            // record each second of media
+            arr
+              .reduce(
+                (p, index) =>
+                  p.then(
+                    () =>
+                      new Promise((resolve) => {
+                        let recorder;
+                        let video = document.createElement("video");
+                        video.onpause = (e) => {
+                          video.onpause = null;
+                          console.log(e);
+                          recorder.stop();
+                        };
+
+                        video.oncanplay = () => {
+                          video.oncanplay = null;
+                          video.play();
+
+                          let stream = video.captureStream();
+
+                          recorder = new MediaRecorder(stream);
+
+                          recorder.start();
+
+                          recorder.ondataavailable = (e) => {
+                            console.log("data event", recorder.state, e.data);
+                            chunks.push(e.data);
+                          };
+
+                          recorder.onstop = (e) => {
+                            resolve();
+                          };
+                        };
+                        video.src = `${blobURL}#t=${index},${index + 1}`;
+                      })
+                  ),
+                Promise.resolve()
+              )
+              .then(() => {
+                console.log(chunks);
+                let video = document.createElement("video");
+                video.controls = true;
+                document.body.appendChild(video);
+                let select = document.createElement("select");
+                document.body.appendChild(select);
+                let option = new Option("select a segment");
+                select.appendChild(option);
+                for (let chunk of chunks) {
+                  let index = chunks.indexOf(chunk);
+                  let option = new Option(
+                    `Play ${index}-${index + 1} seconds of media`,
+                    index
+                  );
+                  select.appendChild(option);
+                }
+                let fullMedia = new Blob(chunks, {
+                  type: mimeCodec,
+                });
+
+                let opt = new Option("Play full media", "Play full media");
+                select.appendChild(opt);
+                select.onchange = () => {
+                  if (select.value !== "Play full media") {
+                    video.src = URL.createObjectURL(chunks[select.value]);
+                  } else {
+                    const mediaSource = new MediaSource();
+                    video.src = URL.createObjectURL(mediaSource);
+                    mediaSource.addEventListener("sourceopen", sourceOpen);
+
+                    function sourceOpen(event) {
+                      // if the media type is supported by `mediaSource`
+                      // fetch resource, begin stream read,
+                      // append stream to `sourceBuffer`
+                      if (MediaSource.isTypeSupported(mimeCodec)) {
+                        var sourceBuffer = mediaSource.addSourceBuffer(
+                          mimeCodec
+                        );
+                        // set `sourceBuffer` `.mode` to `"sequence"`
+                        sourceBuffer.mode = "segments";
+
+                        fetch(URL.createObjectURL(fullMedia))
+                          // return `ReadableStream` of `response`
+                          .then((response) => response.body.getReader())
+                          .then((reader) => {
+                            const processStream = (data) => {
+                              if (data.done) {
+                                return;
+                              }
+                              // append chunk of stream to `sourceBuffer`
+                              sourceBuffer.appendBuffer(data.value);
+                            };
+                            // at `sourceBuffer` `updateend` call `reader.read()`,
+                            // to read next chunk of stream, append chunk to
+                            // `sourceBuffer`
+                            sourceBuffer.addEventListener(
+                              "updateend",
+                              function () {
+                                reader.read().then(processStream);
+                              }
+                            );
+                            // start processing stream
+                            reader.read().then(processStream);
+                            // do stuff `reader` is closed,
+                            // read of stream is complete
+                            return reader.closed.then(() => {
+                              // signal end of stream to `mediaSource`
+                              mediaSource.endOfStream();
+                              return mediaSource.readyState;
+                            });
+                          })
+                          // do stuff when `reader.closed`, `mediaSource` stream ended
+                          .then((msg) => console.log(msg))
+                          .catch((err) => console.log(err));
+                      }
+                      // if `mimeCodec` is not supported by `MediaSource`
+                      else {
+                        alert(mimeCodec + " not supported");
+                      }
+                    }
+                  }
+                };
+              });
+          };
+          media.src = blobURL;
+        });
+    </script>
+    <!-- <video controls></video>
+    <script>
+      var video = document.querySelector("video");
+      var assetURL =
+        "https://video.truyenonline.info/video/tensei-movie/Slime-Tap1.mp4";
+      // Need to be specific for Blink regarding codecs
+      // ./mp4info frag_bunny.mp4 | grep Codec
+      var mimeCodec = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
+      if ("MediaSource" in window && MediaSource.isTypeSupported(mimeCodec)) {
+        var mediaSource = new MediaSource();
+        //console.log(mediaSource.readyState); // closed
+        video.src = URL.createObjectURL(mediaSource);
+        mediaSource.addEventListener("sourceopen", sourceOpen);
+      } else {
+        console.error("Unsupported MIME type or codec: ", mimeCodec);
+      }
+      function sourceOpen(_) {
+        //console.log(this.readyState); // open
+        var mediaSource = this;
+        var sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);
+        fetchAB(assetURL, function (buf) {
+          sourceBuffer.addEventListener("updateend", function (_) {
+            // console.log(mediaSource.readyState); // ended
+            if (mediaSource.readyState === "open") {
+              mediaSource.endOfStream();
+              video.play();
+            }
+          });
+          sourceBuffer.addEventListener("error", function (event) {
+            console.log("an error encountered while trying to append buffer");
+          });
+          sourceBuffer.appendBuffer(buf);
+        });
+      }
+      function fetchAB(url, cb) {
+        console.log(url);
+        var xhr = new XMLHttpRequest();
+        xhr.open("get", url);
+        xhr.responseType = "arraybuffer";
+        xhr.onload = function () {
+          cb(xhr.response);
+        };
+        xhr.send();
+      }
+    </script> -->
+  </body>
+</html>
+<!-- <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="test.js"></script>
+  </head>
+  <body onload="onload()">
+    <img id="image" />
+  </body>
+</html> -->

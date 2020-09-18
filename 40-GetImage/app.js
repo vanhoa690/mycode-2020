@@ -8,6 +8,7 @@ const Downloader = require("./Downloader");
 const createSlug = require("./createSlug");
 const getChap = require("./getChap");
 const getChapTruyenvn = require("./getChapTruyenvn");
+const getChapTruyenOnline = require("./getChapTruyenOnline");
 // const getChap = require("./getChap");
 // const Category = require("./models/category.model");
 // const Done = require("./models/done.model");
@@ -48,8 +49,34 @@ app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x
 app.get("/", async function (req, res) {
   res.render("index");
 });
+app.get("/truyenonline", async function (req, res) {
+  res.render("indexOL");
+});
+app.post("/truyenonline", async function (req, res) {
+  let { url, min, max } = req.body;
+  // let storyInfo = await getStory(url);
+  // let chapList = await getLinks(url);
+  let storyInfo = await getStoryOL(url);
+  let chapList = await getLinksOL(url, min, max);
+  let { name, content } = storyInfo;
+  let story = {
+    url,
+    name,
+    content,
+    chapList,
+  };
+  // console.log(storyInfo);
+  // console.log(chapList);
+  // let authorInfo = await saveAuthor(author);
+  await saveStory(story);
+  // // console.log(authorInfo);
+  console.log("Done");
+  // // res.render("index", { authorInfo, storyInfo });
+});
 app.post("/", async function (req, res) {
   let { url } = req.body;
+  // let storyInfo = await getStory(url);
+  // let chapList = await getLinks(url);
   let storyInfo = await getStory(url);
   let chapList = await getLinks(url);
   let { name, content } = storyInfo;
@@ -82,24 +109,10 @@ app.get("/stories/:id", async function (req, res) {
   // console.log(id);
   try {
     const story = await Story.findById(id);
-    // const result = await getChap.getChap(story); // GET Chap Truyen Tranh Tuan
-    const result = await getChapTruyenvn.getChapTruyenvn(story);
-    // let isGet = true;
-    // let { chapList, chapGet, chapError } = result;
-    // const updateStory = await Story.updateOne(
-    //   { _id: id },
-    //   // { new: true },
-    //   {
-    //     $set: {
-    //       chapList,
-    //       chapGet,
-    //       chapError
-    //     },
-    //   }
-    // );
-    // console.log(chapList);
-    // res.render("chapList", { story });
-    // res.send("Geting chap...." + story.name + story.isGet);
+    //  GET TruyenVn
+    // const result = await getChapTruyenvn.getChapTruyenvn(story);
+    // Get Truyen Online
+    const result = await getChapTruyenOnline.getChapTruyenOnline(story);
   } catch (errors) {
     console.log(errors);
   }
@@ -141,6 +154,48 @@ saveStory = async function (story) {
   }
   // res.redirect("/chaps");
 };
+/* Get Story Truyen Online */
+async function getStoryOL(url) {
+  const browser = await puppeteer.launch(options);
+  const page = await browser.newPage();
+  // await page.setDefaultNavigationTimeout(0);
+  await page.goto(url, {
+    waitUntil: "load",
+  });
+  const name = await page.$eval("h1.page-title", (name) => name.innerText);
+  const content = await page.$eval(
+    ".taxonomy-description",
+    (content) => content.innerText
+  );
+
+  let infoStory = {
+    name,
+    content,
+  };
+  await browser.close();
+  return infoStory;
+}
+async function getLinksOL(url, min, max) {
+  let linksChap = [];
+  for (let i = min; i <= max; i++) {
+    const URL = url.concat("/page/", i);
+    const browser = await puppeteer.launch(options);
+    const page = await browser.newPage();
+    await page.goto(URL, {
+      waitUntil: "load",
+    });
+
+    const links = await page.$$eval("h3.entry-title a", (link) =>
+      link.map((a) => a.href)
+    );
+    await browser.close();
+    linksChap = [...linksChap, ...links];
+  }
+
+  return linksChap;
+  // https://truyenonline.info/7-vien-ngoc-rong
+  // https://truyenonline.info/7-vien-ngoc-rong/page/2
+}
 /* Get Story Truyenvn*/
 async function getStory(url) {
   const browser = await puppeteer.launch(options);

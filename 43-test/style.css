@@ -1,0 +1,27 @@
+#canvas_player_cont {
+  display: none;
+  position: relative;
+}
+
+#canvas_player_cont.disabled {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+#canvas_controls {
+  position: absolute;
+  bottom: 4px;
+  left: 0px;
+  width: calc(100% - 8px);
+  display: flex;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 4px;
+}
+
+#canvas_player_play_btn {
+  flex-grow: 0;
+}
+
+#canvas_player_timeline {
+  flex-grow: 1;
+}

@@ -53,10 +53,11 @@ function downloadFile(url, filePath, ni, tap) {
   const nameImage = path.basename(url);
   // let res = url.split("?")[0];
   let res = nameImage.split(".");
-  if (res[1] === "php") return 1;
+  let typeFile = res[res.length - 1];
+  if (typeFile === "php") return 1;
   // console.log(res[1]);
   // let fileName = ni + "." + res[2];
-  let fileName = ni + "." + res[2];
+  let fileName = ni + "." + typeFile;
   const req = requestCaller.get(url, function (res) {
     // const dirnames = "2";
     // fs.mkdirSync(dirnames, 0o776);

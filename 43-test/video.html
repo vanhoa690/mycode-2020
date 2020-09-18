@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      (() => {
+        if (!("MediaRecorder" in window)) {
+          throw new Error("unsupported browser");
+        }
+        // some global params
+        const CHUNK_DURATION = 1000;
+        const MAX_SLICES = 15; // get only 15 slices
+        const FPS = 30;
+
+        async function init() {
+          const url =
+            "https://nickdesaulniers.github.io/netfix/demo/frag_bunny.mp4";
+          const slices = await getSlices(url); // slice the original media in longer chunks
+          mess_up_array(slices); // Let's shuffle these slices,
+          // otherwise there is no point merging it in a new file
+          generateSelect(slices); // displays each chunk independentely
+          window.player = new SlicePlayer(slices); // init our player
+        }
+
+        const SlicePlayer = class {
+          /*
+         @args: Array of populated HTMLVideoElements
+    */
+          constructor(parts) {
+            this.parts = parts;
+
+            this.initVideoContext();
+            this.initAudioContext();
+
+            this.currentIndex = 0; // to know which video we'll play
+            this.currentTime = 0;
+
+            this.duration = parts.reduce((a, b) => b._duration + a, 0); // the sum of all parts' durations
+            // (see below why "_")
+
+            this.initDOM();
+            // attach our onended callback only on the last vid
+            this.parts[this.parts.length - 1].onended = (e) => this.onended();
+            this.resetAll(); // set all videos' currentTime to 0 + draw first frame
+          }
+          initVideoContext() {
+            const c = (this.canvas = document.createElement("canvas"));
+            c.width = this.parts[0].videoWidth;
+            c.height = this.parts[0].videoHeight;
+            this.v_ctx = c.getContext("2d");
+          }
+          initAudioContext() {
+            const a = (this.a_ctx = new AudioContext());
+            const gain = (this.volume_node = a.createGain());
+            gain.connect(a.destination);
+            // extract the audio from our video elements so that we can record it
+            this.audioSources = this.parts.map((v) =>
+              a.createMediaElementSource(v)
+            );
+            this.audioSources.forEach((s) => s.connect(gain));
+          }
+          initDOM() {
+            // all DOM things...
+            canvas_player_timeline.max = this.duration;
+            canvas_player_cont.appendChild(this.canvas);
+            canvas_player_play_btn.onclick = (e) =>
+              this.startVid(this.currentIndex);
+            canvas_player_cont.style.display = "inline-block";
+            canvas_player_timeline.oninput = (e) => {
+              if (!this.recording) this.onseeking(e);
+            };
+            canvas_player_record_btn.onclick = (e) => this.record();
+          }
+          resetAll() {
+            this.currentTime = canvas_player_timeline.value = 0;
+            // when the first part as actually been reset to start
+            this.parts[0].onseeked = (e) => {
+              this.parts[0].onseeked = null;
+              this.draw(0); // draw it
+            };
+            this.parts.forEach((v) => (v.currentTime = 0));
+
+            if (this.playing && this.stopLoop) {
+              this.playing = false;
+              this.stopLoop();
+            }
+          }
+          startVid(index) {
+            // starts playing the video at given index
+            if (index > this.parts.length - 1) {
+              // that was the last one
+              this.onended();
+              return;
+            }
+            this.playing = true;
+            this.currentIndex = index; // update our currentIndex
+            this.parts[index].play().then(() => {
+              // try to avoid at maximum the gaps between different parts
+              if (this.recording && this.recorder.state === "paused") {
+                this.recorder.resume();
+              }
+            });
+
+            this.startLoop();
+          }
+          startNext() {
+            // starts the next part before the current one actually ended
+            const nextPart = this.parts[this.currentIndex + 1];
+            if (!nextPart) {
+              // current === last
+              return;
+            }
+            this.playing = true;
+            if (!nextPart.paused) {
+              // already playing ?
+              return;
+            }
+            // try to avoid at maximum the gaps between different parts
+            if (
+              this.recording &&
+              this.recorder &&
+              this.recorder.state === "recording"
+            ) {
+              this.recorder.pause();
+            }
+
+            nextPart.play().then(() => {
+              ++this.currentIndex; // this is now the current video
+              if (!this.playing) {
+                // somehow got stop in between ?
+                this.playing = true;
+                this.startLoop(); // start again
+              }
+              // try to avoid at maximum the gaps between different parts
+              if (this.recording && this.recorder.state === "paused") {
+                this.recorder.resume();
+              }
+            });
+          }
+          startLoop() {
+            // starts our update loop
+            // see https://stackoverflow.com/questions/40687010/
+            this.stopLoop = audioTimerLoop((e) => this.update(), 1000 / FPS);
+          }
+          update(t) {
+            // at every tick
+            const currentPart = this.parts[this.currentIndex];
+
+            this.updateTimeLine(); // update the timeline
+
+            if (!this.playing || currentPart.paused) {
+              // somehow got stopped
+              this.playing = false;
+              if (this.stopLoop) {
+                this.stopLoop(); // stop the loop
+              }
+            }
+
+            this.draw(this.currentIndex); // draw the current video on the canvas
+
+            // calculate how long we've got until the end of this part
+            const remainingTime =
+              currentPart._duration - currentPart.currentTime;
+            if (remainingTime < 2 / FPS) {
+              // less than 2 frames ?
+              setTimeout((e) => this.startNext(), remainingTime / 2); // start the next part
+            }
+          }
+          draw(index) {
+            // draw the video[index] on the canvas
+            this.v_ctx.drawImage(this.parts[index], 0, 0);
+          }
+          updateTimeLine() {
+            // get the sum of all parts' currentTime
+            this.currentTime = this.parts.reduce(
+              (a, b) =>
+                (isFinite(b.currentTime) ? b.currentTime : b._duration) + a,
+              0
+            );
+            canvas_player_timeline.value = this.currentTime;
+          }
+          onended() {
+            // triggered when the last part ends
+            // if we are recording, stop the recorder
+            if (this.recording && this.recorder.state !== "inactive") {
+              this.recorder.stop();
+            }
+            // go back to first frame
+            this.resetAll();
+            this.currentIndex = 0;
+            this.playing = false;
+          }
+          onseeking(evt) {
+            // when we click the timeline
+            // first reset all videos' currentTime to 0
+            this.parts.forEach((v) => (v.currentTime = 0));
+            this.currentTime = +evt.target.value;
+            let index = 0;
+            let sum = 0;
+            // find which part should be played at this time
+            for (index; index < this.parts.length; index++) {
+              let p = this.parts[index];
+              if (sum + p._duration > this.currentTime) {
+                break;
+              }
+              sum += p._duration;
+              p.currentTime = p._duration;
+            }
+            this.currentIndex = index;
+            // set the currentTime of this part
+            this.parts[index].currentTime = this.currentTime - sum;
+
+            if (this.playing) {
+              // if we were playing
+              this.startVid(index); // set this part as the current one
+            } else {
+              this.parts[index].onseeked = (e) => {
+                // wait we actually seeked the correct position
+                this.parts[index].onseeked = null;
+                this.draw(index); // and draw a single frame
+              };
+            }
+          }
+          record() {
+            // inits the recording
+            this.recording = true; // let the app know we're recording
+            this.resetAll(); // go back to first frame
+
+            canvas_controls.classList.add("disabled"); // disable controls
+
+            const v_stream = this.canvas.captureStream(FPS); // make a stream of our canvas
+            const dest = this.a_ctx.createMediaStreamDestination(); // make a stream of our AudioContext
+            this.volume_node.connect(dest);
+            // FF bug... see https://bugzilla.mozilla.org/show_bug.cgi?id=1296531
+            let merged_stream = null;
+            if (!("mozCaptureStream" in HTMLVideoElement.prototype)) {
+              v_stream.addTrack(dest.stream.getAudioTracks()[0]);
+              merged_stream = v_stream;
+            } else {
+              merged_stream = new MediaStream(
+                v_stream.getVideoTracks().concat(dest.stream.getAudioTracks())
+              );
+            }
+
+            const chunks = [];
+            const rec = (this.recorder = new MediaRecorder(merged_stream, {
+              mimeType: MediaRecorder._preferred_type,
+            }));
+            rec.ondataavailable = (e) => chunks.push(e.data);
+            rec.onstop = (e) => {
+              merged_stream.getTracks().forEach((track) => track.stop());
+              this.export(new Blob(chunks));
+            };
+            rec.start();
+
+            this.startVid(0); // start playing
+          }
+          export(blob) {
+            // once the recording is over
+            const a = document.createElement("a");
+            a.download = a.innerHTML = "merged.webm";
+            a.href = URL.createObjectURL(blob, {
+              type: MediaRecorder._preferred_type,
+            });
+            exports_cont.appendChild(a);
+            canvas_controls.classList.remove("disabled");
+            this.recording = false;
+            this.resetAll();
+          }
+        };
+
+        // END Player
+
+        function generateSelect(slices) {
+          // generates a select to show each slice independently
+          const select = document.createElement("select");
+          select.appendChild(new Option("none", -1));
+          slices.forEach((v, i) =>
+            select.appendChild(new Option(`slice ${i}`, i))
+          );
+          document.body.insertBefore(select, slice_player_cont);
+          select.onchange = (e) => {
+            slice_player_cont.firstElementChild &&
+              slice_player_cont.firstElementChild.remove();
+            if (+select.value === -1) return; // 'none'
+            slice_player_cont.appendChild(slices[+select.value]);
+          };
+        }
+
+        async function getSlices(url) {
+          // loads the main video, and record some slices from it
+
+          const mainVid = await loadVid(url);
+
+          // try to make the slicing silent... That's not easy.
+          let a = null;
+          if (mainVid.mozCaptureStream) {
+            // target FF
+            a = new AudioContext();
+            // this causes an Range error in chrome
+            //		a.createMediaElementSource(mainVid);
+          } else {
+            // chrome
+            // this causes the stream to be muted too in FF
+            mainVid.muted = true;
+            // mainVid.volume = 0; // same
+          }
+
+          mainVid.play();
+          const mainStream = mainVid.captureStream
+            ? mainVid.captureStream()
+            : mainVid.mozCaptureStream();
+          console.log("mainVid loaded");
+          const slices = await getSlicesInLoop(mainStream, mainVid);
+          console.log("all slices loaded");
+          setTimeout(() => console.clear(), 1000);
+          if (a && a.close) {
+            // kill the silence audio context (FF)
+            a.close();
+          }
+          mainVid.pause();
+          URL.revokeObjectURL(mainVid.src);
+
+          return Promise.resolve(slices);
+        }
+
+        async function getSlicesInLoop(stream, mainVid) {
+          // far from being precise
+          // to do it well, we would need to get the keyframes info, but it's out of scope for this answer
+          let slices = [];
+          const loop = async function (i) {
+            const slice = await mainVid
+              .play()
+              .then(() => getNewSlice(stream, mainVid));
+            console.log(`${i + 1} slice(s) loaded`);
+            slices.push(slice);
+            if (mainVid.currentTime < mainVid._duration && i + 1 < MAX_SLICES) {
+              loop(++i);
+            } else done(slices);
+          };
+          loop(0);
+          let done;
+          return new Promise((res, rej) => {
+            done = (arr) => res(arr);
+          });
+        }
+
+        function getNewSlice(stream, vid) {
+          // one recorder per slice
+          return new Promise((res, rej) => {
+            const rec = new MediaRecorder(stream, {
+              mimeType: MediaRecorder._preferred_type,
+            });
+            const chunks = [];
+            rec.ondataavailable = (e) => chunks.push(e.data);
+            rec.onstop = (e) => {
+              const blob = new Blob(chunks);
+              res(loadVid(URL.createObjectURL(blob)));
+            };
+            rec.start();
+            setTimeout(() => {
+              const p = vid.pause();
+              if (p && p.then) p.then(() => rec.stop());
+              else rec.stop();
+            }, CHUNK_DURATION);
+          });
+        }
+
+        function loadVid(url) {
+          // helper returning an video, preloaded
+          return fetch(url)
+            .then((r) => r.blob())
+            .then((b) => makeVid(URL.createObjectURL(b)));
+        }
+
+        function makeVid(url) {
+          // helper to create a video element
+          const v = document.createElement("video");
+          v.control = true;
+          v.preload = "metadata";
+          return new Promise((res, rej) => {
+            v.onloadedmetadata = (e) => {
+              // chrome duration bug...
+              // see https://bugs.chromium.org/p/chromium/issues/detail?id=642012
+              // will also occur in next FF versions, in worse...
+              if (v.duration === Infinity) {
+                v.onseeked = (e) => {
+                  v._duration = v.currentTime; // FF new bug never updates duration to correct value
+                  v.onseeked = null;
+                  v.currentTime = 0;
+                  res(v);
+                };
+                v.currentTime = 1e5; // big but not too big either
+              } else {
+                v._duration = v.duration;
+                res(v);
+              }
+            };
+            v.onerror = rej;
+            v.src = url;
+          });
+        }
+
+        function mess_up_array(arr) {
+          // shuffles an array
+          const _sort = () => {
+            let r = Math.random() - 0.5;
+            return r < -0.1 ? -1 : r > 0.1 ? 1 : 0;
+          };
+          arr.sort(_sort);
+          arr.sort(_sort);
+          arr.sort(_sort);
+        }
+
+        /*
+        An alternative timing loop, based on AudioContext's clock
+
+        @arg callback : a callback function
+            with the audioContext's currentTime passed as unique argument
+        @arg frequency : float in ms;
+        @returns : a stop function
+
+    */
+        function audioTimerLoop(callback, frequency) {
+          const freq = frequency / 1000; // AudioContext time parameters are in seconds
+          const aCtx = new AudioContext();
+          // Chrome needs our oscillator node to be attached to the destination
+          // So we create a silent Gain Node
+          const silence = aCtx.createGain();
+          silence.gain.value = 0;
+          silence.connect(aCtx.destination);
+
+          onOSCend();
+
+          var stopped = false; // A flag to know when we'll stop the loop
+          function onOSCend() {
+            const osc = aCtx.createOscillator();
+            osc.onended = onOSCend; // so we can loop
+            osc.connect(silence);
+            osc.start(0); // start it now
+            osc.stop(aCtx.currentTime + freq); // stop it next frame
+            callback(aCtx.currentTime); // one frame is done
+            if (stopped) {
+              // user broke the loop
+              osc.onended = function () {
+                aCtx.close(); // clear the audioContext
+                return;
+              };
+            }
+          }
+          // return a function to stop our loop
+          return () => (stopped = true);
+        }
+
+        // get the preferred codec available (vp8 is my personal, more reader support)
+        MediaRecorder._preferred_type = [
+          "video/webm\;codecs=vp8",
+          "video/webm\;codecs=vp9",
+          "video/webm\;codecs=h264",
+          "video/webm",
+        ].filter((t) => MediaRecorder.isTypeSupported(t))[0];
+
+        init();
+      })();
+    </script>
+    <div id="slice_player_cont"></div>
+    <div id="canvas_player_cont">
+      <div id="canvas_controls">
+        <button id="canvas_player_play_btn">play</button>
+        <input
+          type="range"
+          min="0"
+          max="10"
+          step="0.01"
+          id="canvas_player_timeline"
+        />
+        <button id="canvas_player_record_btn">save</button>
+      </div>
+    </div>
+    <div id="exports_cont"></div>
+  </body>
+</html>

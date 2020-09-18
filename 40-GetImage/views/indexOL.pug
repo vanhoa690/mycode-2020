@@ -1,0 +1,18 @@
+doctype html
+head
+  meta(charset='UTF-8')
+  meta(name='viewport' content='width=device-width, initial-scale=1.0')
+  link(rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css')
+  title Tool Get Content
+.container
+  h2 Tool Get Content
+  form(action="/truyenonline", method="POST")
+    .form-group
+      label(for='url') URL Story Get:
+      input#url.form-control(name="url", type="text")
+    .form-group
+      label(for='min') Min Page
+      input#min.form-control(name="min", type="number")
+      label(for='max') Max Page
+      input#max.form-control(name="max", type="number")
+    button.btn.btn-primary Get Links Chaps Story

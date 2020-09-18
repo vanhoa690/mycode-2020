@@ -9,6 +9,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "compress-images": "^1.9.5",
+    "gifsicle": "^5.1.0",
+    "gm": "^1.23.1",
+    "image-size": "^0.9.1",
+    "imagemin": "^7.0.1",
+    "imagemin-jpegtran": "^7.0.0",
+    "imagemin-pngquant": "^9.0.1",
+    "sharp": "^0.26.0",
     "string-natural-compare": "^3.0.1"
   }
 }
